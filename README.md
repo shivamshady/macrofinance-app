@@ -1,2 +1,3 @@
 # macrofinance-app
-a flutter project
+
+A new Flutter project.
