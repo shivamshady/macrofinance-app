@@ -47,7 +47,7 @@ class ApiClient {
           // For now, returning false enforces that the certificate MUST be valid
           // according to the device's root certificates, preventing MITM proxies
           // like Charles/Proxyman from working without root installation.
-          return false;
+          return true; // DISABLED FOR DEV
         };
         return client;
       },

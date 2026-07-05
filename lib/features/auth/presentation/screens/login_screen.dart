@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/consent_checkbox.dart';
+import '../../../../core/network/api_service.dart';
 
 /// Login screen — v2 with Navy/Emerald palette, no BLoC dependency
 class LoginScreen extends StatefulWidget {
@@ -47,16 +48,27 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final phone = _phoneController.text.trim();
+      await ApiService.sendOtp(phone);
+      
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    context.push('/otp', extra: {
-      'phone': _phoneController.text.trim(),
-      'sessionId': 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
-    });
+      context.push('/otp', extra: {
+        'phone': phone,
+        'sessionId': 'session-${DateTime.now().millisecondsSinceEpoch}',
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send OTP. Please try again.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override

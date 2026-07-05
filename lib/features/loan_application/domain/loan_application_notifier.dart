@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/storage/hive_storage.dart';
 import '../../../core/constants/tier_constants.dart';
+import '../../../core/network/api_service.dart';
 
 /// Loan Application State — Riverpod AsyncNotifier
 /// Tracks multi-step progress with Hive persistence
@@ -97,19 +98,37 @@ class LoanApplicationNotifier extends StateNotifier<LoanApplicationState> {
     );
   }
 
+  /// Start a new application on the backend
+  Future<void> startApplication() async {
+    try {
+      final response = await ApiService.startLoanApplication();
+      state = state.copyWith(applicationId: response['loanId']);
+    } catch (e) {
+      setError(e.toString());
+    }
+  }
+
   /// Save step data and advance to next step
   Future<void> completeStep(int step, Map<String, dynamic> data) async {
-    // Save to Hive for persistence
-    await HiveStorage.saveStepData(step, data);
-    await HiveStorage.saveLoanStep(step + 1);
+    try {
+      if (state.applicationId != null) {
+        await ApiService.saveLoanStep(state.applicationId!, step, data);
+      }
+      
+      // Save to Hive for persistence
+      await HiveStorage.saveStepData(step, data);
+      await HiveStorage.saveLoanStep(step + 1);
 
-    final updatedData = Map<int, Map<String, dynamic>>.from(state.stepData);
-    updatedData[step] = data;
+      final updatedData = Map<int, Map<String, dynamic>>.from(state.stepData);
+      updatedData[step] = data;
 
-    state = state.copyWith(
-      currentStep: step + 1,
-      stepData: updatedData,
-    );
+      state = state.copyWith(
+        currentStep: step + 1,
+        stepData: updatedData,
+      );
+    } catch (e) {
+      setError('Failed to save progress: $e');
+    }
   }
 
   /// Go back to previous step

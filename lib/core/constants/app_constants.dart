@@ -10,7 +10,7 @@ class AppConstants {
   static const String appBuildNumber = '1';
 
   // ── API ──
-  static const String baseUrl = 'https://api.macrofinance.in/v1';
+  static const String baseUrl = 'http://10.0.2.2:3000/api';
   static const int connectTimeout = 30000; // ms
   static const int receiveTimeout = 30000; // ms
 
@@ -55,6 +55,7 @@ class AppConstants {
   static const String keyAuthToken = 'auth_token';
   static const String keyRefreshToken = 'refresh_token';
   static const String keyUserId = 'user_id';
+  static const String keyUserPhone = 'user_phone';
   static const String keyUserRole = 'user_role';
   static const String keyBiometricEnabled = 'biometric_enabled';
   static const String keyOnboardingCompleted = 'onboarding_completed';

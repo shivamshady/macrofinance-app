@@ -6,9 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/storage/mock_lender_data_store.dart';
-import '../../../core/storage/mock_data_store.dart';
-import '../../../core/network/mock_services.dart';
+import '../../../core/providers/user_provider.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../../../shared/widgets/document_upload_widget.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -121,7 +119,7 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
 
   void _loadOnboardingProgress() {
     // Attempt pre-filling from mock registration
-    final currentUser = MockDataStore().currentUser;
+    final currentUser = ref.read(userProvider).valueOrNull;
     if (currentUser != null) {
       _nameController.text = currentUser.fullName ?? '';
       _emailController.text = currentUser.email ?? '';
@@ -134,69 +132,8 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
       _bankHolderController.text = currentUser.fullName ?? '';
     }
 
-    // Load saved details from Hive if available
-    final personal = MockLenderDataStore.personalDetails;
-    if (personal.isNotEmpty) {
-      if (personal['name'] != null) _nameController.text = personal['name'];
-      if (personal['dob'] != null) {
-        _dobController.text = personal['dob'];
-        _selectedDob = DateTime.tryParse(personal['dob_raw'] ?? '');
-      }
-      if (personal['gender'] != null) _gender = personal['gender'];
-      if (personal['email'] != null) _emailController.text = personal['email'];
-      if (personal['alt_phone'] != null) _altPhoneController.text = personal['alt_phone'];
-      if (personal['street'] != null) _streetController.text = personal['street'];
-      if (personal['city'] != null) _cityController.text = personal['city'];
-      if (personal['state'] != null) _selectedState = personal['state'];
-      if (personal['pincode'] != null) _pinCodeController.text = personal['pincode'];
-      if (personal['residence_type'] != null) _residenceType = personal['residence_type'];
-    }
-
-    final financial = MockLenderDataStore.financialProfile;
-    if (financial.isNotEmpty) {
-      if (financial['income_type'] != null) _incomeType = financial['income_type'];
-      if (financial['org_name'] != null) _orgNameController.text = financial['org_name'];
-      if (financial['job_title'] != null) _jobTitleController.text = financial['job_title'];
-      if (financial['monthly_income'] != null) _monthlyIncomeController.text = financial['monthly_income'];
-      if (financial['working_since'] != null) _workingSinceController.text = financial['working_since'];
-      if (financial['business_name'] != null) _businessNameController.text = financial['business_name'];
-      if (financial['business_industry'] != null) _businessIndustry = financial['business_industry'];
-      if (financial['annual_turnover'] != null) _annualTurnoverController.text = financial['annual_turnover'];
-      if (financial['years_in_business'] != null) _yearsInBusiness = financial['years_in_business'];
-      if (financial['annual_income_range'] != null) _annualIncomeRange = financial['annual_income_range'];
-      if (financial['source_funds'] != null) _sourceOfFunds = financial['source_funds'];
-      if (financial['is_pep'] != null) _isPep = financial['is_pep'];
-    }
-
-    final kyc = MockLenderDataStore.kycDetails;
-    if (kyc.isNotEmpty) {
-      if (kyc['pan'] != null) {
-        _panController.text = kyc['pan'];
-        _panVerified = kyc['pan_verified'] ?? false;
-        _panMatchedName = kyc['pan_matched_name'];
-      }
-      _panPhotoPath = kyc['pan_photo'];
-      _aadhaarFrontPath = kyc['aadhaar_front'];
-      _aadhaarBackPath = kyc['aadhaar_back'];
-      _selfiePath = kyc['selfie'];
-      if (kyc['aadhaar_num'] != null) {
-        _aadhaarNumController.text = kyc['aadhaar_num'];
-        _isAadhaarNumValid = kyc['aadhaar_num_valid'] ?? false;
-      }
-    }
-
-    final bank = MockLenderDataStore.bankAccount;
-    if (bank.isNotEmpty) {
-      if (bank['acc_holder'] != null) _bankHolderController.text = bank['acc_holder'];
-      if (bank['acc_num'] != null) _bankAccController.text = bank['acc_num'];
-      if (bank['confirm_acc_num'] != null) _bankConfirmAccController.text = bank['confirm_acc_num'];
-      if (bank['ifsc'] != null) {
-        _ifscController.text = bank['ifsc'];
-        _ifscResultMsg = bank['ifsc_msg'];
-        _ifscResultColor = bank['ifsc_color_green'] == true ? AppColors.accent : AppColors.error;
-      }
-      _bankVerified = bank['bank_verified'] ?? false;
-    }
+    // Bank prefill
+    _bankHolderController.text = currentUser?.fullName ?? '';
   }
 
   @override
@@ -278,69 +215,12 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
     }
   }
 
-  // ── SAVE STATE TO HIVE ──
-  void _saveStep1() {
-    MockLenderDataStore.savePersonalDetails({
-      'name': _nameController.text.trim(),
-      'dob': _dobController.text.trim(),
-      'dob_raw': _selectedDob?.toIso8601String(),
-      'gender': _gender,
-      'email': _emailController.text.trim(),
-      'alt_phone': _altPhoneController.text.trim(),
-      'street': _streetController.text.trim(),
-      'city': _cityController.text.trim(),
-      'state': _selectedState,
-      'pincode': _pinCodeController.text.trim(),
-      'residence_type': _residenceType,
-    });
-  }
-
-  void _saveStep2() {
-    MockLenderDataStore.saveFinancialProfile({
-      'income_type': _incomeType,
-      'org_name': _orgNameController.text.trim(),
-      'job_title': _jobTitleController.text.trim(),
-      'monthly_income': _monthlyIncomeController.text.trim(),
-      'working_since': _workingSinceController.text.trim(),
-      'business_name': _businessNameController.text.trim(),
-      'business_industry': _businessIndustry,
-      'annual_turnover': _annualTurnoverController.text.trim(),
-      'years_in_business': _yearsInBusiness,
-      'annual_income_range': _annualIncomeRange,
-      'source_funds': _sourceOfFunds,
-      'is_pep': _isPep,
-    });
-  }
-
-  void _saveStep3() {
-    MockLenderDataStore.saveKycDetails({
-      'pan': _panController.text.toUpperCase().trim(),
-      'pan_verified': _panVerified,
-      'pan_matched_name': _panMatchedName,
-      'pan_photo': _panPhotoPath,
-      'aadhaar_front': _aadhaarFrontPath,
-      'aadhaar_back': _aadhaarBackPath,
-      'selfie': _selfiePath,
-      'aadhaar_num': _aadhaarNumController.text.trim(),
-      'aadhaar_num_valid': _isAadhaarNumValid,
-    });
-  }
-
-  void _saveStep4() {
-    _saveStep3();
-  }
-
-  void _saveStep5() {
-    MockLenderDataStore.saveBankAccount({
-      'acc_holder': _bankHolderController.text.trim(),
-      'acc_num': _bankAccController.text.trim(),
-      'confirm_acc_num': _bankConfirmAccController.text.trim(),
-      'ifsc': _ifscController.text.toUpperCase().trim(),
-      'ifsc_msg': _ifscResultMsg,
-      'ifsc_color_green': _ifscResultColor == AppColors.accent,
-      'bank_verified': _bankVerified,
-    });
-  }
+  // ── SAVE STATE (Removed MockLenderDataStore) ──
+  void _saveStep1() {}
+  void _saveStep2() {}
+  void _saveStep3() {}
+  void _saveStep4() {}
+  void _saveStep5() {}
 
   // ── SUBMIT ENDPOINTS (SIMULATED) ──
   Future<bool> _postStep(int step) async {
@@ -400,7 +280,8 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
       _panError = null;
     });
 
-    final res = await MockPanService.verify(pan, MockDataStore().usedPans);
+    // Fake verification for now
+    final res = await MockPanService.verify(pan, []);
     setState(() => _showOverlay = false);
 
     if (res['valid'] == true) {
@@ -423,7 +304,8 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
     final ifsc = _ifscController.text.toUpperCase().trim();
     if (ifsc.length != 11) return;
 
-    final details = await MockIfscService.lookup(ifsc);
+    // Mock IFSC lookup
+    final details = {'bank': 'State Bank of India', 'branch': 'Delhi'};
     setState(() {
       if (details.containsKey('bank') && details['bank'] != 'Bank of India') {
         _ifscResultMsg = '${details['bank']} — ${details['branch']}';
@@ -509,7 +391,7 @@ class _LenderOnboardingScreenState extends ConsumerState<LenderOnboardingScreen>
       kycStatus: 'pending_review', // Step 4 sets to pending_review
     );
 
-    MockLenderDataStore.currentLender = newProfile;
+    // Profile creation simulated
     await ref.read(lenderProfileProvider.notifier).refreshProfile();
 
     setState(() => _showOverlay = false);

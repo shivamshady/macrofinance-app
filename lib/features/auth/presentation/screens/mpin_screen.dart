@@ -3,6 +3,8 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/network/api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// MPIN Setup / Verification Screen
 /// 4-digit PIN with session timeout re-auth
@@ -202,7 +204,7 @@ class _MpinScreenState extends State<MpinScreen> {
     );
   }
 
-  void _handleSetup(String pin) {
+  void _handleSetup(String pin) async {
     if (!_isConfirmStep) {
       setState(() {
         _currentPin = pin;
@@ -211,8 +213,22 @@ class _MpinScreenState extends State<MpinScreen> {
       Future.microtask(() => _pinController.clear());
     } else {
       if (pin == _currentPin) {
-        // Save MPIN and navigate to dashboard
-        Navigator.of(context).pop(true);
+        setState(() => _errorMessage = null);
+        try {
+          const storage = FlutterSecureStorage();
+          final userId = await storage.read(key: AppConstants.keyUserId);
+          if (userId != null) {
+            await ApiService.setMpin(userId, pin);
+          }
+          if (mounted) Navigator.of(context).pop(true);
+        } catch (e) {
+          setState(() {
+            _errorMessage = 'Failed to save MPIN. Try again.';
+            _isConfirmStep = false;
+            _currentPin = '';
+          });
+          Future.microtask(() => _pinController.clear());
+        }
       } else {
         setState(() {
           _errorMessage = 'PINs don\'t match. Try again.';
@@ -226,12 +242,23 @@ class _MpinScreenState extends State<MpinScreen> {
 
   Future<void> _handleVerification(String pin) async {
     setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Simulate verification
-    if (pin == '1234') { // In production: compare with SecureStorage hash
-      Navigator.of(context).pop(true);
-    } else {
+    
+    try {
+      const storage = FlutterSecureStorage();
+      final phone = await storage.read(key: AppConstants.keyUserPhone);
+      
+      if (phone != null) {
+        final response = await ApiService.loginMpin(phone, pin);
+        
+        if (response['success'] == true) {
+          await storage.write(key: AppConstants.keyAuthToken, value: response['accessToken']);
+          await storage.write(key: AppConstants.keyRefreshToken, value: response['refreshToken']);
+          if (mounted) Navigator.of(context).pop(true);
+          return;
+        }
+      }
+      
+      if (!mounted) return;
       setState(() {
         _attempts++;
         _isVerifying = false;
@@ -241,6 +268,13 @@ class _MpinScreenState extends State<MpinScreen> {
         } else {
           _errorMessage = 'Incorrect MPIN';
         }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _pinController.clear();
+        _errorMessage = 'Incorrect MPIN or server error';
       });
     }
   }

@@ -8,27 +8,35 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/tier_progress_card.dart';
 import '../../../../shared/widgets/tier_badge.dart';
 
-import '../../../../core/storage/mock_data_store.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/user_provider.dart';
+import '../../../../core/providers/dashboard_provider.dart';
 
 /// Dashboard v2 — Tier-aware Borrower & Lender views
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   final bool isLender;
 
   const DashboardScreen({super.key, this.isLender = false});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = MockDataStore().currentUser;
-    final userName = user?.fullName ?? 'Shivam';
-    final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
+    final userAsync = ref.watch(userProvider);
+    final dashboardAsync = ref.watch(dashboardProvider);
 
-    return Scaffold(
+    return userAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
+      data: (user) {
+        final userName = user.fullName;
+        final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
+
+        return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
       body: CustomScrollView(
         slivers: [
@@ -97,26 +105,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverList(
               delegate: SliverChildListDelegate(
-                widget.isLender ? _buildLenderView(isDark) : _buildBorrowerView(isDark),
+                widget.isLender
+                    ? _buildLenderView(isDark, dashboardAsync)
+                    : _buildBorrowerView(isDark, dashboardAsync),
               ),
             ),
           ),
         ],
       ),
     );
+      },
+    );
   }
 
   // ── Borrower Dashboard (v2: Tier-aware) ──
-  List<Widget> _buildBorrowerView(bool isDark) {
-    return [
-      const SizedBox(height: 8),
+  List<Widget> _buildBorrowerView(bool isDark, AsyncValue<Map<String, dynamic>> dashboardAsync) {
+    return dashboardAsync.when(
+      loading: () => [const Center(child: CircularProgressIndicator())],
+      error: (e, st) => [Center(child: Text('Error loading dashboard: $e'))],
+      data: (dashboard) {
+        final tier = dashboard['tierLevel'] ?? 1;
+        final score = dashboard['creditScore'] ?? 300;
+        final activeLoansCount = dashboard['activeLoans'] ?? 0;
+        final totalRepaid = dashboard['totalRepaidLoans'] ?? 0;
+        
+        return [
+          const SizedBox(height: 8),
 
-      // Tier Progress Card (replaces old credit score card)
-      const TierProgressCard(
-        currentTierLevel: 2,
-        loansRepaidOnTime: 1,
-        creditScore: 680,
-      ),
+          // Tier Progress Card
+          TierProgressCard(
+            currentTierLevel: tier,
+            loansRepaidOnTime: totalRepaid,
+            creditScore: score,
+          ),
 
       const SizedBox(height: 20),
 
@@ -193,12 +214,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isDark: isDark,
       ),
 
-      const SizedBox(height: 100),
-    ];
+          const SizedBox(height: 100),
+        ];
+      },
+    );
   }
 
   // ── Lender Dashboard ──
-  List<Widget> _buildLenderView(bool isDark) {
+  List<Widget> _buildLenderView(bool isDark, AsyncValue<Map<String, dynamic>> dashboardAsync) {
     return [
       const SizedBox(height: 8),
 

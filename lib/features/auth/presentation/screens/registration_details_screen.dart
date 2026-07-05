@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/storage/mock_data_store.dart';
 import '../../../../shared/models/user_model.dart';
 
 class RegistrationDetailsScreen extends StatefulWidget {
@@ -102,7 +101,9 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
       });
       return;
     }
-    final isValid = MockDataStore().referralCodes.contains(code.toUpperCase());
+    // Simple mock referral validation
+    final validCodes = ['WELCOME500', 'FRIEND2024'];
+    final isValid = validCodes.contains(code.toUpperCase());
     setState(() {
       _isReferralValid = isValid;
       _referralMessage = isValid ? 'Valid referral code ✓' : 'Invalid code';
@@ -127,29 +128,17 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulate registration POST /auth/register/details
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Prepare data to pass to next screen
+    final payload = {
+      'phone': widget.phone,
+      'fullName': _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'dateOfBirth': _selectedDate!.toIso8601String().split('T')[0],
+      'gender': _selectedGender,
+      'referralCode': _refController.text.trim(),
+    };
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Create and save user
-    final newUser = UserModel(
-      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-      phone: widget.phone.replaceAll(RegExp(r'\D'), ''),
-      fullName: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      dateOfBirth: _selectedDate,
-      gender: _selectedGender,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      kycStatus: KycStatus.pending,
-    );
-
-    MockDataStore().currentUser = newUser;
-    MockDataStore().allUsers.add(newUser);
-
-    context.go('/role-select', extra: widget.phone);
+    context.go('/role-select', extra: payload);
   }
 
   @override

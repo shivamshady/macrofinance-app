@@ -105,8 +105,8 @@ class AppRouter {
         path: '/role-select',
         name: 'roleSelect',
         builder: (context, state) {
-          final phone = state.extra as String? ?? '';
-          return RoleSelectScreen(phone: phone);
+          final extras = state.extra as Map<String, dynamic>? ?? {};
+          return RoleSelectScreen(registrationData: extras);
         },
       ),
       GoRoute(

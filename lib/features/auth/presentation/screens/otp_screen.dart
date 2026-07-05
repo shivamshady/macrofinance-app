@@ -7,8 +7,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../../core/network/mock_auth_service.dart';
-import '../../../../core/storage/mock_data_store.dart';
+import '../../../../core/network/api_service.dart';
+import '../../../../core/providers/auth_provider.dart';
 
 /// OTP verification screen — v2, no BLoC dependency
 class OtpScreen extends StatefulWidget {
@@ -76,34 +76,54 @@ class _OtpScreenState extends State<OtpScreen>
   Future<void> _verifyOtp(String otp) async {
     setState(() => _isLoading = true);
     
-    final response = await MockAuthService.verifyOtp(widget.phone, otp);
-    
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+    try {
+      final response = await ApiService.verifyOtp(widget.phone, otp);
+      
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    if (response.success) {
-      if (widget.phone == '6200854150' || response.role == 'admin') {
+      if (response['success'] == true) {
+        // Save auth data
+        final storage = const FlutterSecureStorage();
+        await storage.write(key: AppConstants.keyAuthToken, value: response['accessToken']);
+        await storage.write(key: AppConstants.keyRefreshToken, value: response['refreshToken']);
+        await storage.write(key: AppConstants.keyUserId, value: response['userId']?.toString() ?? '');
+        await storage.write(key: AppConstants.keyUserPhone, value: widget.phone);
+        await storage.write(key: AppConstants.keyUserRole, value: response['role']?.toString() ?? 'borrower');
+
+        if (widget.phone == '6200854150' || response['role'] == 'admin') {
+          context.go('/admin/dashboard');
+          return;
+        }
         context.go('/admin/dashboard');
         return;
       }
       
-      if (response.isNewUser == true) {
-        context.go('/register/details', extra: widget.phone);
-      } else {
-        final storage = const FlutterSecureStorage();
-        final savedRole = await storage.read(key: 'user_role');
-        final role = savedRole ?? 'borrower';
         
-        if (role == 'lender') {
-          context.go('/home/lender');
+        if (response['isNewUser'] == true) {
+          context.go('/register/details', extra: widget.phone);
         } else {
-          context.go('/home');
+          final role = response['role'] ?? 'borrower';
+          if (role == 'lender') {
+            context.go('/home/lender');
+          } else {
+            context.go('/home');
+          }
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['error'] ?? 'Invalid OTP code'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
-    } else {
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(response.error ?? 'Invalid OTP code'),
+          content: Text('Failed to verify OTP. Please try again.'),
           backgroundColor: AppColors.error,
         ),
       );

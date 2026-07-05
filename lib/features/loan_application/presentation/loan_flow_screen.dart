@@ -14,11 +14,27 @@ import 'step10_esign.dart';
 import 'step11_disbursement.dart';
 
 /// Loan Flow Coordinator — routes to correct step based on state
-class LoanFlowScreen extends ConsumerWidget {
+class LoanFlowScreen extends ConsumerStatefulWidget {
   const LoanFlowScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoanFlowScreen> createState() => _LoanFlowScreenState();
+}
+
+class _LoanFlowScreenState extends ConsumerState<LoanFlowScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = ref.read(loanApplicationProvider);
+      if (state.applicationId == null && state.currentStep == 1) {
+        ref.read(loanApplicationProvider.notifier).startApplication();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(loanApplicationProvider);
 
     return switch (state.currentStep) {

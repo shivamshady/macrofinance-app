@@ -4,12 +4,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_button.dart';
 
+import '../../../../core/network/api_service.dart';
+import '../../../../core/constants/app_constants.dart';
+
 class RoleSelectScreen extends StatefulWidget {
-  final String phone;
+  final Map<String, dynamic> registrationData;
 
   const RoleSelectScreen({
     super.key,
-    required this.phone,
+    required this.registrationData,
   });
 
   @override
@@ -24,23 +27,45 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
     if (_selectedRole == null) return;
     
     setState(() => _isLoading = true);
-    
-    const storage = FlutterSecureStorage();
-    await storage.write(key: 'user_role', value: _selectedRole);
-    // In a real app we'd also generate/save a token and create the user on backend
-    await storage.write(key: 'jwt_token', value: 'mock_token_${widget.phone}');
-    
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    
-    final mpinOk = await context.push<bool>('/mpin', extra: true); // isSetup = true
-    if (mpinOk == true) {
-      if (!mounted) return;
-      if (_selectedRole == 'lender') {
-        context.go('/home/lender');
+
+    try {
+      final payload = Map<String, dynamic>.from(widget.registrationData);
+      payload['role'] = _selectedRole;
+
+      final response = await ApiService.register(payload);
+      
+      if (response['success'] == true) {
+        const storage = FlutterSecureStorage();
+        await storage.write(key: AppConstants.keyAuthToken, value: response['accessToken']);
+        await storage.write(key: AppConstants.keyUserId, value: response['userId'].toString());
+        await storage.write(key: AppConstants.keyUserPhone, value: payload['phone'].toString());
+        await storage.write(key: AppConstants.keyUserRole, value: _selectedRole);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        
+        final mpinOk = await context.push<bool>('/mpin', extra: true); // isSetup = true
+        if (mpinOk == true) {
+          if (!mounted) return;
+          if (_selectedRole == 'lender') {
+            context.go('/home/lender');
+          } else {
+            context.go('/home');
+          }
+        }
       } else {
-        context.go('/home');
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['error'] ?? 'Registration failed')),
+        );
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to complete registration')),
+      );
     }
   }
 

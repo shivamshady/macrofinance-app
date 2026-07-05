@@ -14,8 +14,7 @@ import '../domain/providers/platform_health_provider.dart';
 import '../domain/models/lender_investment.dart';
 import '../domain/models/platform_health.dart';
 
-
-import '../../../core/storage/mock_data_store.dart';
+import '../../../core/providers/user_provider.dart';
 
 class LenderDashboardScreen extends ConsumerWidget {
   const LenderDashboardScreen({super.key});
@@ -25,6 +24,7 @@ class LenderDashboardScreen extends ConsumerWidget {
     final profileState = ref.watch(lenderProfileProvider);
     final portfolioState = ref.watch(portfolioProvider);
     final healthState = ref.watch(platformHealthProvider);
+    final userAsync = ref.watch(userProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (profileState.isLoading || profileState.profile == null) {
@@ -36,9 +36,12 @@ class LenderDashboardScreen extends ConsumerWidget {
 
     final profile = profileState.profile!;
     final activeInvs = portfolioState.investments.where((inv) => inv.status == 'active').toList();
-    final user = MockDataStore().currentUser;
-    final userName = user?.fullName ?? 'Shivam';
-    final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
+    
+    final userName = userAsync.maybeWhen(
+      data: (user) => user.fullName,
+      orElse: () => 'Lender',
+    );
+    final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'L';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,

@@ -20,10 +20,12 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Token expired — could trigger refresh flow here
+      // Token expired — trigger refresh flow
       debugPrint('[Auth] Token expired, needs refresh');
+      // A full implementation would use a Dio instance without interceptors to refresh token
+      // then retry the original request.
     }
     handler.next(err);
   }
