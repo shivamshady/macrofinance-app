@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import '../domain/providers/platform_health_provider.dart';
 import '../domain/models/lender_investment.dart';
 import '../domain/models/platform_health.dart';
 
+
+import '../../../core/storage/mock_data_store.dart';
 
 class LenderDashboardScreen extends ConsumerWidget {
   const LenderDashboardScreen({super.key});
@@ -33,6 +36,9 @@ class LenderDashboardScreen extends ConsumerWidget {
 
     final profile = profileState.profile!;
     final activeInvs = portfolioState.investments.where((inv) => inv.status == 'active').toList();
+    final user = MockDataStore().currentUser;
+    final userName = user?.fullName ?? 'Shivam';
+    final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
@@ -45,17 +51,17 @@ class LenderDashboardScreen extends ConsumerWidget {
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
                 gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'M',
-                  style: TextStyle(
+                  userInitials,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -65,7 +71,7 @@ class LenderDashboardScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Lender Portal', style: AppTextStyles.bodySmall),
-                Text('Rahul Sharma', style: AppTextStyles.titleSmall),
+                Text(userName, style: AppTextStyles.titleSmall),
               ],
             ),
           ],
@@ -76,7 +82,34 @@ class LenderDashboardScreen extends ConsumerWidget {
             tooltip: 'Switch to Borrower',
             icon: Icon(Icons.swap_horiz_rounded,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-            onPressed: () => context.go('/home'),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Switch to Borrower Role'),
+                  content: const Text(
+                    'Are you sure you want to switch to Borrower role? Your current investor state will be preserved.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Switch'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                context.go('/home');
+              }
+            },
           ),
           const SizedBox(width: 12),
         ],
@@ -141,6 +174,80 @@ class LenderDashboardScreen extends ConsumerWidget {
               Text('Returns History', style: AppTextStyles.titleMedium),
               const SizedBox(height: 14),
               _buildReturnsChartCard(context),
+              const SizedBox(height: 28),
+
+              // Recent Returns
+              Text('Recent Returns', style: AppTextStyles.titleMedium),
+              const SizedBox(height: 14),
+              if (portfolioState.isLoading)
+                const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              else if (portfolioState.returns.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: Text('No returns history found')),
+                )
+              else
+                ...portfolioState.returns.take(3).map((ret) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: isDark ? BorderSide(color: AppColors.darkBorder) : BorderSide.none,
+                    ),
+                    elevation: isDark ? 0 : 1.5,
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentSurface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.trending_up_rounded, color: AppColors.accent),
+                      ),
+                      title: Text(
+                        'High Yield Fund',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Growth Plan · 12 months',
+                            style: AppTextStyles.caption,
+                          ),
+                          const SizedBox(height: 2),
+                          Builder(builder: (context) {
+                            final payoutDate = ret.paidAt ?? ret.createdAt;
+                            return Text(
+                              '${payoutDate.day} ${_getMonthName(payoutDate.month)} ${payoutDate.year}',
+                              style: AppTextStyles.caption.copyWith(fontSize: 11),
+                            );
+                          }),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '+₹${ret.netReturn.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                            style: GoogleFonts.inter(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                        ],
+                      ),
+                      onTap: () {
+                        context.go('/invest/plan/${ret.investmentId}');
+                      },
+                    ),
+                  );
+                }).toList(),
               const SizedBox(height: 48),
             ],
           ),
@@ -536,11 +643,24 @@ class LenderDashboardScreen extends ConsumerWidget {
     );
   }
 
+  List<FlSpot> _generateMonthlyData() {
+    final spots = <FlSpot>[];
+    final rand = Random(42);
+    double cumulativeValue = 0;
+    for (int i = 0; i < 12; i++) {
+      cumulativeValue += 7000 + rand.nextInt(2250);
+      spots.add(FlSpot(i.toDouble(), cumulativeValue));
+    }
+    return spots;
+  }
+
   Widget _buildReturnsChartCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final spots = _generateMonthlyData();
+
     return Container(
-      height: 180,
-      padding: const EdgeInsets.all(16),
+      height: 200,
+      padding: const EdgeInsets.fromLTRB(10, 16, 20, 10),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
@@ -549,32 +669,72 @@ class LenderDashboardScreen extends ConsumerWidget {
       ),
       child: LineChart(
         LineChartData(
+          minX: 0,
+          maxX: 11,
+          clipData: const FlClipData.all(),
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 55,
+                getTitlesWidget: (value, meta) {
+                  String label;
+                  if (value >= 100000) {
+                    label = '₹${(value / 100000).toStringAsFixed(1)}L';
+                  } else if (value >= 1000) {
+                    label = '₹${(value / 1000).toStringAsFixed(0)}K';
+                  } else {
+                    label = '₹${value.toInt()}';
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      label,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                },
+              ),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: _bottomTitlesWidget,
-                reservedSize: 22,
+                interval: 1,
+                reservedSize: 30,
+                getTitlesWidget: (value, meta) {
+                  final months = [
+                    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                  ];
+                  final idx = value.toInt();
+                  if (idx < 0 || idx >= months.length) return const SizedBox();
+                  
+                  final targetMonth = DateTime.now()
+                      .subtract(Duration(days: (11 - idx) * 30));
+                  
+                  return SideTitleWidget(
+                    meta: meta,
+                    child: Text(
+                      months[targetMonth.month - 1],
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  );
+                },
               ),
             ),
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
             LineChartBarData(
-              spots: const [
-                FlSpot(0, 250),
-                FlSpot(1, 250),
-                FlSpot(2, 562),
-                FlSpot(3, 562),
-              ],
+              spots: spots,
               isCurved: true,
               gradient: AppColors.accentGradient,
               barWidth: 3,
-              dotData: const FlDotData(show: true),
+              dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
@@ -593,25 +753,12 @@ class LenderDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _bottomTitlesWidget(double value, TitleMeta meta) {
-    String text = '';
-    switch (value.toInt()) {
-      case 0:
-        text = 'Mar';
-        break;
-      case 1:
-        text = 'Apr';
-        break;
-      case 2:
-        text = 'May';
-        break;
-      case 3:
-        text = 'Jun';
-        break;
-    }
-    return SideTitleWidget(
-      meta: meta,
-      child: Text(text, style: AppTextStyles.caption.copyWith(fontSize: 10)),
-    );
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    if (month >= 1 && month <= 12) return months[month - 1];
+    return '';
   }
 }

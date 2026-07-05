@@ -17,7 +17,6 @@ class MpinScreen extends StatefulWidget {
 
 class _MpinScreenState extends State<MpinScreen> {
   final _pinController = TextEditingController();
-  final _confirmPinController = TextEditingController();
   String _currentPin = '';
   String _confirmPin = '';
   bool _isConfirmStep = false;
@@ -29,7 +28,6 @@ class _MpinScreenState extends State<MpinScreen> {
   @override
   void dispose() {
     _pinController.dispose();
-    _confirmPinController.dispose();
     super.dispose();
   }
 
@@ -94,7 +92,7 @@ class _MpinScreenState extends State<MpinScreen> {
                 child: PinCodeTextField(
                   appContext: context,
                   length: AppConstants.mpinLength,
-                  controller: _isConfirmStep ? _confirmPinController : _pinController,
+                  controller: _pinController,
                   obscureText: true,
                   animationType: AnimationType.scale,
                   pinTheme: PinTheme(
@@ -209,8 +207,8 @@ class _MpinScreenState extends State<MpinScreen> {
       setState(() {
         _currentPin = pin;
         _isConfirmStep = true;
-        _confirmPinController.clear();
       });
+      Future.microtask(() => _pinController.clear());
     } else {
       if (pin == _currentPin) {
         // Save MPIN and navigate to dashboard
@@ -218,10 +216,10 @@ class _MpinScreenState extends State<MpinScreen> {
       } else {
         setState(() {
           _errorMessage = 'PINs don\'t match. Try again.';
-          _confirmPinController.clear();
           _isConfirmStep = false;
-          _pinController.clear();
+          _currentPin = '';
         });
+        Future.microtask(() => _pinController.clear());
       }
     }
   }

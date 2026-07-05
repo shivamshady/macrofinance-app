@@ -166,4 +166,9 @@ class AppColors {
   // Glass
   static Color get glassBackground => Colors.white.withValues(alpha: 0.1);
   static Color get glassBorder => Colors.white.withValues(alpha: 0.2);
+
+  // Additional Compatibility Aliases
+  static const Color textHint = lightTextTertiary;
+  static const Color border = lightBorder;
+  static const Color background = lightBackground;
 }

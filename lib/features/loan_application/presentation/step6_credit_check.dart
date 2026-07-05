@@ -6,16 +6,16 @@ import '../../../core/constants/tier_constants.dart';
 import '../../../shared/widgets/stepper_widget.dart';
 import '../domain/loan_application_notifier.dart';
 
-/// Step 5 — Credit Bureau Check
+/// Step 6 — Credit Bureau Check (formerly Step 5)
 /// Animated score display, tier eligibility preview
-class Step5CreditCheckScreen extends ConsumerStatefulWidget {
-  const Step5CreditCheckScreen({super.key});
+class Step6CreditCheckScreen extends ConsumerStatefulWidget {
+  const Step6CreditCheckScreen({super.key});
 
   @override
-  ConsumerState<Step5CreditCheckScreen> createState() => _Step5CreditCheckScreenState();
+  ConsumerState<Step6CreditCheckScreen> createState() => _Step6CreditCheckScreenState();
 }
 
-class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
+class _Step6CreditCheckScreenState extends ConsumerState<Step6CreditCheckScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   int? _creditScore;
@@ -48,29 +48,39 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
     // Simulate bureau API call
     await Future.delayed(const Duration(seconds: 3));
 
-    // Simulated score (in production: CRIF/Experian REST API)
-    const simulatedScore = 680;
-    final band = _getScoreBand(simulatedScore);
+    final loanState = ref.read(loanApplicationProvider);
+    final kycData = loanState.stepData[5] ?? {}; // Step 5 is now KYC
 
-    if (simulatedScore < 500) {
+    int score = 680;
+    
+    // Additional bonus for completed KYC (shows identity confidence):
+    if (kycData['pan_verified'] == true) score += 15;
+    if (kycData['aadhaar_verified'] == true) score += 15;
+    if (kycData['selfie_uploaded'] == true) score += 10;
+    
+    // Deduct if KYC was incomplete (admin rejected it):
+    if (kycData['kyc_status'] == 'rejected') score -= 80;
+
+    final band = _getScoreBand(score);
+
+    if (score < 500) {
       setState(() {
         _isLoading = false;
         _isRejected = true;
-        _creditScore = simulatedScore;
+        _creditScore = score;
         _scoreBand = band;
       });
       return;
     }
 
-    final loanState = ref.read(loanApplicationProvider);
     final eligible = TierConstants.getEligibleTier(
       loansRepaidOnTime: loanState.stepData[1] != null ? 0 : 0, // first-time borrower
-      creditScore: simulatedScore,
+      creditScore: score,
     );
 
     setState(() {
       _isLoading = false;
-      _creditScore = simulatedScore;
+      _creditScore = score;
       _scoreBand = band;
       _eligibleTier = eligible;
     });
@@ -105,7 +115,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
       appBar: AppBar(title: const Text('Credit Check')),
       body: Column(
         children: [
-          const LoanStepperWidget(currentStep: 5),
+          const LoanStepperWidget(currentStep: 6),
           const SizedBox(height: 8),
           Expanded(
             child: _isLoading
@@ -124,7 +134,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
+          const SizedBox(
             width: 80,
             height: 80,
             child: CircularProgressIndicator(
@@ -143,11 +153,12 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'This usually takes a few seconds',
+            'Analyzing your verified KYC and financial profile...',
             style: GoogleFonts.inter(
               fontSize: 14,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -160,7 +171,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.cancel_outlined, size: 72, color: AppColors.error),
+          const Icon(Icons.cancel_outlined, size: 72, color: AppColors.error),
           const SizedBox(height: 20),
           Text(
             'Application Not Eligible',
@@ -209,7 +220,6 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // Score display
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -259,7 +269,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: scoreColor.withValues(alpha: 0.1),
+                            color: scoreColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -276,8 +286,6 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Score bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
@@ -303,7 +311,6 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
 
           const SizedBox(height: 20),
 
-          // Tier eligibility
           if (_eligibleTier != null)
             Container(
               width: double.infinity,
@@ -311,7 +318,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
               decoration: BoxDecoration(
                 color: AppColors.accentSurface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                border: Border.all(color: AppColors.accent.withOpacity(0.3)),
               ),
               child: Column(
                 children: [
@@ -337,7 +344,6 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
               ),
             ),
 
-          // No credit history message
           if (_creditScore != null && _creditScore! == 0)
             Container(
               width: double.infinity,
@@ -382,7 +388,7 @@ class _Step5CreditCheckScreenState extends ConsumerState<Step5CreditCheckScreen>
     if (_eligibleTier != null) {
       ref.read(loanApplicationProvider.notifier).updateTier(_eligibleTier!.level);
     }
-    ref.read(loanApplicationProvider.notifier).completeStep(5, {
+    ref.read(loanApplicationProvider.notifier).completeStep(6, {
       'credit_score': _creditScore,
       'score_band': _scoreBand,
       'eligible_tier': _eligibleTier?.level ?? 1,

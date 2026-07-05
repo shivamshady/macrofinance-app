@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/storage/hive_storage.dart';
+import 'core/storage/mock_lender_data_store.dart';
 
 /// MacroFinance v2 — Entry Point
 void main() async {
@@ -26,6 +27,7 @@ void main() async {
 
   // Initialize Hive local storage
   await HiveStorage.init();
+  await MockLenderDataStore.loadFromHive();
 
   runApp(
     const ProviderScope(

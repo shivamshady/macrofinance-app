@@ -1,6 +1,8 @@
 /// Lender Profile Model
 /// Extends the user for investor/lender-specific functions
 class LenderProfile {
+  final bool onboardingComplete;
+  final String kycStatus; // none, pending_review, verified, rejected
   final String id;
   final String userId;
   final bool isActive;
@@ -35,6 +37,8 @@ class LenderProfile {
     this.financialYear = '2024-25',
     required this.createdAt,
     required this.updatedAt,
+    this.onboardingComplete = false,
+    this.kycStatus = 'none',
   });
 
   factory LenderProfile.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class LenderProfile {
       financialYear: json['financial_year'] as String? ?? '2024-25',
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      onboardingComplete: json['onboarding_complete'] as bool? ?? false,
+      kycStatus: json['kyc_status'] as String? ?? 'none',
     );
   }
 
@@ -78,6 +84,8 @@ class LenderProfile {
       'financial_year': financialYear,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'onboarding_complete': onboardingComplete,
+      'kyc_status': kycStatus,
     };
   }
 
@@ -94,6 +102,8 @@ class LenderProfile {
     String? panForTds,
     double? annualInterestEarned,
     String? financialYear,
+    bool? onboardingComplete,
+    String? kycStatus,
   }) {
     return LenderProfile(
       id: id,
@@ -112,6 +122,8 @@ class LenderProfile {
       financialYear: financialYear ?? this.financialYear,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      kycStatus: kycStatus ?? this.kycStatus,
     );
   }
 }

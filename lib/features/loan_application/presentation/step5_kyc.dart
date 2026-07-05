@@ -7,17 +7,16 @@ import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/stepper_widget.dart';
 import '../domain/loan_application_notifier.dart';
 
-
-/// Step 6 — KYC Verification
+/// Step 5 — KYC Verification (formerly Step 6)
 /// Aadhaar OTP → DigiLocker → Selfie via HyperVerge → Video
-class Step6KycScreen extends ConsumerStatefulWidget {
-  const Step6KycScreen({super.key});
+class Step5KycScreen extends ConsumerStatefulWidget {
+  const Step5KycScreen({super.key});
 
   @override
-  ConsumerState<Step6KycScreen> createState() => _Step6KycScreenState();
+  ConsumerState<Step5KycScreen> createState() => _Step5KycScreenState();
 }
 
-class _Step6KycScreenState extends ConsumerState<Step6KycScreen> {
+class _Step5KycScreenState extends ConsumerState<Step5KycScreen> {
   int _kycStep = 0; // 0=aadhaar, 1=digilocker, 2=selfie, 3=video, 4=complete
   bool _isProcessing = false;
   bool _aadhaarVerified = false;
@@ -45,7 +44,7 @@ class _Step6KycScreenState extends ConsumerState<Step6KycScreen> {
       appBar: AppBar(title: const Text('KYC Verification')),
       body: Column(
         children: [
-          const LoanStepperWidget(currentStep: 6),
+          const LoanStepperWidget(currentStep: 5),
           const SizedBox(height: 8),
           Expanded(
             child: SingleChildScrollView(
@@ -351,7 +350,6 @@ class _Step6KycScreenState extends ConsumerState<Step6KycScreen> {
         setState(() => _isProcessing = false);
       }
     } catch (e) {
-      // Fallback for Web/desktop browser without cameras
       final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
       if (file != null) {
         final bytes = await file.readAsBytes();
@@ -382,7 +380,6 @@ class _Step6KycScreenState extends ConsumerState<Step6KycScreen> {
         setState(() => _isProcessing = false);
       }
     } catch (e) {
-      // Fallback for Web/desktop browser without video recorders
       final XFile? file = await _picker.pickVideo(source: ImageSource.gallery);
       if (file != null) {
         setState(() {
@@ -398,13 +395,14 @@ class _Step6KycScreenState extends ConsumerState<Step6KycScreen> {
   }
 
   void _onContinue() {
-    ref.read(loanApplicationProvider.notifier).completeStep(6, {
+    ref.read(loanApplicationProvider.notifier).completeStep(5, {
       'aadhaar_verified': true,
       'aadhaar_last4': _aadhaarController.text.trim(),
       'digilocker_linked': true,
       'selfie_uploaded': true,
       'video_uploaded': true,
       'kyc_status': 'verified',
+      'pan_verified': true, // Assume verified since it passed step 2
     });
   }
 }

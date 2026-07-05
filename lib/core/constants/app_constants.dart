@@ -78,8 +78,8 @@ class AppConstants {
     'PAN Verification',     // Step 2
     'Occupation & Income',  // Step 3
     'References',           // Step 4
-    'Credit Check',         // Step 5
-    'KYC Verification',     // Step 6
+    'KYC Verification',     // Step 5
+    'Credit Check',         // Step 6
     'Loan Offer',           // Step 7
     'Bank Verification',    // Step 8
     'e-NACH Setup',         // Step 9

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
+export 'app_colors.dart';
 
 /// MacroFinance v2 — Material 3 Theme
 /// Light-mode-first with full dark mode support

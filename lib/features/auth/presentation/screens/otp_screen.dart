@@ -6,6 +6,9 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/network/mock_auth_service.dart';
+import '../../../../core/storage/mock_data_store.dart';
 
 /// OTP verification screen — v2, no BLoC dependency
 class OtpScreen extends StatefulWidget {
@@ -72,108 +75,37 @@ class _OtpScreenState extends State<OtpScreen>
 
   Future<void> _verifyOtp(String otp) async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
+    
+    final response = await MockAuthService.verifyOtp(widget.phone, otp);
+    
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (widget.phone == '6200854150') {
-      // Secret Admin Number
-      context.go('/admin/dashboard');
+    if (response.success) {
+      if (widget.phone == '6200854150' || response.role == 'admin') {
+        context.go('/admin/dashboard');
+        return;
+      }
+      
+      if (response.isNewUser == true) {
+        context.go('/register/details', extra: widget.phone);
+      } else {
+        final storage = const FlutterSecureStorage();
+        final savedRole = await storage.read(key: 'user_role');
+        final role = savedRole ?? 'borrower';
+        
+        if (role == 'lender') {
+          context.go('/home/lender');
+        } else {
+          context.go('/home');
+        }
+      }
     } else {
-      // Normal User - choose portal
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          return AlertDialog(
-            backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              'Select Portal Mode',
-              style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Would you like to apply for loans or fund other borrowers?',
-                  style: AppTextStyles.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                
-                // Borrower Portal option
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/home');
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurfaceVariant : Colors.grey.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.monetization_on_outlined, color: AppColors.primary, size: 24),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Borrower Portal', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text('Request cash loans, track repayments.', style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                
-                // Lender / Investor Portal option
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/home/lender');
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurfaceVariant : Colors.grey.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.trending_up_rounded, color: AppColors.primary, size: 24),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Lender / Investor Portal', style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text('Deploy funds in interest-yield plans.', style: AppTextStyles.caption.copyWith(fontSize: 10)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.error ?? 'Invalid OTP code'),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }

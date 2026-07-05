@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/storage/mock_lender_data_store.dart';
 import '../domain/providers/lender_profile_provider.dart';
 
 class InvestLandingScreen extends ConsumerWidget {
@@ -24,28 +25,32 @@ class InvestLandingScreen extends ConsumerWidget {
       );
     }
 
-    // Gate: Check if user is registered and disclosure signed
-    final profile = state.profile;
-    if (profile != null) {
-      if (profile.riskDisclosureSigned) {
-        // Already signed, go to dashboard
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.go('/invest/dashboard');
-        });
-        return Scaffold(
-          backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
-          body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        );
-      } else {
-        // Profile exists but not signed, go to disclosure screen
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.go('/invest/risk-disclosure');
-        });
-        return Scaffold(
-          backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
-          body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        );
-      }
+    // Gate: Check MockLenderDataStore.currentLender.onboardingComplete
+    final currentLender = MockLenderDataStore.currentLender;
+    if (currentLender == null || !currentLender.onboardingComplete) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/invest/onboarding');
+      });
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
+        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    } else if (!currentLender.riskDisclosureSigned) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/invest/risk-disclosure');
+      });
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
+        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/invest/dashboard');
+      });
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
+        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
     }
 
     // Default: Show "Become a Lender" intro UI
@@ -134,13 +139,40 @@ class InvestLandingScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 48),
 
-              // Get Started Button
+               // Get Started Button
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: GradientButton(
                   text: 'Become an Investor',
-                  onPressed: () => context.go('/invest/risk-disclosure'),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Switch to Lender Role'),
+                        content: const Text(
+                          'Are you sure you want to switch to Lender role? Your current borrower application state will be preserved.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Switch'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      context.go('/invest/risk-disclosure');
+                    }
+                  },
                 ),
               ),
               const SizedBox(height: 24),

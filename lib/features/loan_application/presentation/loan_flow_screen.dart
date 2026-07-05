@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shared/widgets/stepper_widget.dart';
 import '../domain/loan_application_notifier.dart';
 import 'step1_personal.dart';
 import 'step2_pan.dart';
 import 'step3_occupation.dart';
 import 'step4_references.dart';
-import 'step5_credit_check.dart';
-import 'step6_kyc.dart';
+import 'step5_kyc.dart';
+import 'step6_credit_check.dart';
 import 'step7_loan_offer.dart';
 import 'step8_bank.dart';
 import 'step9_nach.dart';
@@ -27,8 +26,8 @@ class LoanFlowScreen extends ConsumerWidget {
       2 => const Step2PanScreen(),
       3 => const Step3OccupationScreen(),
       4 => const Step4ReferencesScreen(),
-      5 => const Step5CreditCheckScreen(),
-      6 => const Step6KycScreen(),
+      5 => const Step5KycScreen(),
+      6 => const Step6CreditCheckScreen(),
       7 => const Step7LoanOfferScreen(),
       8 => const Step8BankScreen(),
       9 => const Step9NachScreen(),

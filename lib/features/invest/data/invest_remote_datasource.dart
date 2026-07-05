@@ -376,9 +376,57 @@ class InvestRemoteDataSource {
 
   Future<List<InvestmentReturn>> getReturns(String lenderId) async {
     final box = await _getBox();
-    final list = box.get('returns_$lenderId', defaultValue: []);
-    return List<Map<String, dynamic>>.from(list)
-        .map((e) => InvestmentReturn.fromJson(e))
+    final list = box.get('returns_$lenderId');
+    if (list == null || (list as List).isEmpty) {
+      final seeded = [
+        InvestmentReturn(
+          id: 'ret_1',
+          lenderId: lenderId,
+          investmentId: 'inv_starter',
+          returnMonth: 12,
+          returnPeriodStart: DateTime(2024, 11, 15),
+          returnPeriodEnd: DateTime(2024, 12, 15),
+          grossReturn: 2500.0,
+          tdsDeducted: 0.0,
+          netReturn: 2500.0,
+          status: 'paid',
+          paidAt: DateTime(2024, 12, 15),
+          createdAt: DateTime(2024, 12, 15),
+        ),
+        InvestmentReturn(
+          id: 'ret_2',
+          lenderId: lenderId,
+          investmentId: 'inv_starter',
+          returnMonth: 11,
+          returnPeriodStart: DateTime(2024, 10, 15),
+          returnPeriodEnd: DateTime(2024, 11, 15),
+          grossReturn: 1800.0,
+          tdsDeducted: 0.0,
+          netReturn: 1800.0,
+          status: 'paid',
+          paidAt: DateTime(2024, 11, 15),
+          createdAt: DateTime(2024, 11, 15),
+        ),
+        InvestmentReturn(
+          id: 'ret_3',
+          lenderId: lenderId,
+          investmentId: 'inv_starter',
+          returnMonth: 10,
+          returnPeriodStart: DateTime(2024, 9, 15),
+          returnPeriodEnd: DateTime(2024, 10, 15),
+          grossReturn: 2200.0,
+          tdsDeducted: 0.0,
+          netReturn: 2200.0,
+          status: 'paid',
+          paidAt: DateTime(2024, 10, 15),
+          createdAt: DateTime(2024, 10, 15),
+        ),
+      ];
+      await box.put('returns_$lenderId', seeded.map((e) => e.toJson()).toList());
+      return seeded;
+    }
+    return List<dynamic>.from(list)
+        .map((e) => InvestmentReturn.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
 

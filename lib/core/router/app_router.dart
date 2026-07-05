@@ -3,6 +3,8 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/otp_screen.dart';
 import '../../features/auth/presentation/screens/registration_screen.dart';
+import '../../features/auth/presentation/screens/registration_details_screen.dart';
+import '../../features/auth/presentation/screens/role_select_screen.dart';
 import '../../features/auth/presentation/screens/mpin_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/kyc/presentation/screens/kyc_home_screen.dart';
@@ -16,6 +18,7 @@ import '../../features/notifications/presentation/screens/notification_screen.da
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import 'bottom_nav_shell.dart';
 import '../../features/invest/presentation/invest_landing_screen.dart';
+import '../../features/invest/presentation/lender_onboarding_screen.dart';
 import '../../features/invest/presentation/risk_disclosure_screen.dart';
 import '../../features/invest/presentation/lender_dashboard_screen.dart';
 import '../../features/invest/presentation/investment_plans_screen.dart';
@@ -88,6 +91,22 @@ class AppRouter {
         builder: (context, state) {
           final phone = state.extra as String? ?? '';
           return RegistrationScreen(phone: phone);
+        },
+      ),
+      GoRoute(
+        path: '/register/details',
+        name: 'registerDetails',
+        builder: (context, state) {
+          final phone = state.extra as String? ?? '';
+          return RegistrationDetailsScreen(phone: phone);
+        },
+      ),
+      GoRoute(
+        path: '/role-select',
+        name: 'roleSelect',
+        builder: (context, state) {
+          final phone = state.extra as String? ?? '';
+          return RoleSelectScreen(phone: phone);
         },
       ),
       GoRoute(
@@ -206,6 +225,10 @@ class AppRouter {
       GoRoute(
         path: '/invest',
         builder: (context, state) => const InvestLandingScreen(),
+      ),
+      GoRoute(
+        path: '/invest/onboarding',
+        builder: (context, state) => const LenderOnboardingScreen(),
       ),
       GoRoute(
         path: '/invest/dashboard',

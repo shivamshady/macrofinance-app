@@ -8,6 +8,8 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/tier_progress_card.dart';
 import '../../../../shared/widgets/tier_badge.dart';
 
+import '../../../../core/storage/mock_data_store.dart';
+
 /// Dashboard v2 — Tier-aware Borrower & Lender views
 class DashboardScreen extends StatefulWidget {
   final bool isLender;
@@ -22,6 +24,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = MockDataStore().currentUser;
+    final userName = user?.fullName ?? 'Shivam';
+    final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'S';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
@@ -36,17 +41,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
                     gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'M',
-                      style: TextStyle(
+                      userInitials,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 18,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -56,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Good Evening', style: AppTextStyles.bodySmall),
-                    Text('Rahul Sharma', style: AppTextStyles.titleSmall),
+                    Text(userName, style: AppTextStyles.titleSmall),
                   ],
                 ),
               ],
@@ -201,50 +206,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF022C22)], // Dark navy to dark green
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: isDark ? null : AppColors.cardShadow,
-          border: isDark ? Border.all(color: AppColors.darkBorder) : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Portfolio Value', style: AppTextStyles.labelMedium),
+            Text(
+              'Portfolio Value',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               '₹8,47,500',
               style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 16),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSurface,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.trending_up_rounded, size: 14, color: AppColors.accent),
-                      const SizedBox(width: 4),
-                      Text(
-                        '+12.5% returns',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A2E), // explicit dark background chip
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_upward_rounded, size: 14, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+12.5% IRR',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'This quarter',
+                      style: AppTextStyles.caption.copyWith(color: Colors.white.withOpacity(0.7)),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Total Returns: ₹97,500',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.8),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text('This quarter', style: AppTextStyles.caption),
               ],
             ),
             const SizedBox(height: 20),
@@ -571,13 +600,27 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final valueColor = label == 'Default Rate'
+        ? AppColors.success
+        : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(14),
+          bottomRight: Radius.circular(14),
+          topLeft: Radius.circular(4),
+          bottomLeft: Radius.circular(4),
+        ),
         boxShadow: isDark ? null : AppColors.cardShadow,
-        border: isDark ? Border.all(color: AppColors.darkBorder) : null,
+        border: Border(
+          left: BorderSide(color: color, width: 3),
+          top: isDark ? const BorderSide(color: AppColors.darkBorder) : BorderSide.none,
+          right: isDark ? const BorderSide(color: AppColors.darkBorder) : BorderSide.none,
+          bottom: isDark ? const BorderSide(color: AppColors.darkBorder) : BorderSide.none,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,13 +629,23 @@ class _StatCard extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: color),
               const SizedBox(width: 8),
-              Text(label, style: AppTextStyles.caption.copyWith(color: color)),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             amount,
-            style: AppTextStyles.headlineSmall.copyWith(color: color),
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
           ),
         ],
       ),
